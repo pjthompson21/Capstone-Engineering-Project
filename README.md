@@ -16,9 +16,9 @@ Developed and tested 8–10 working detection rules covering authentication, pri
 
 Implemented three fully reproducible attack scenarios using scripted or runbook-based execution:
 
-Privilege escalation via sudo abuse
-Persistence via cron job manipulation
-File integrity violations (create/modify/delete events)
+- Privilege escalation via sudo abuse
+- Persistence via cron job manipulation
+- File integrity violations (create/modify/delete events)
 
 Each scenario generates predictable telemetry for detection and response validation.
 
@@ -26,20 +26,20 @@ Each scenario generates predictable telemetry for detection and response validat
 
 Built automated SOAR workflows using n8n to:
 
-Ingest and parse security alerts
-Enrich events with contextual metadata
-Trigger AI-assisted triage workflows
-Generate structured incident artifacts
-Execute response actions based on playbook selection
+- Ingest and parse security alerts
+- Enrich events with contextual metadata
+- Trigger AI-assisted triage workflows
+- Generate structured incident artifacts
+- Execute response actions based on playbook selection
 
 🔹 Agentic AI Triage System
 
 Implemented an AI-assisted triage layer that processes security alerts and produces structured, validated JSON outputs including:
 
-Event correlation and evidence extraction (event IDs, timestamps)
-Classification of attack type and severity
-Recommended response playbook selection
-Guarded decision-making to prevent unsafe or unverified actions
+- Event correlation and evidence extraction (event IDs, timestamps)
+- Classification of attack type and severity
+- Recommended response playbook selection
+- Guarded decision-making to prevent unsafe or unverified actions
 
 This enables consistent, evidence-driven incident handling aligned with SOC workflows.
 
