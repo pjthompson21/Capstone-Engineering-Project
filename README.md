@@ -39,7 +39,7 @@ Built automated SOAR workflows using n8n to:
 - Enrich events with contextual metadata  
 - Trigger AI-assisted triage workflows  
 - Generate structured incident artifacts  
-- Execute response actions based on playbook selection  
+- Trigger response actions based on playbook selection
 
 ---
 
