@@ -9,9 +9,6 @@ SOAR Workflows in n8n: The workflows are designed to ingest alerts, enrich them,
 Agentic AI Triage: The triage process produces strict JSON outputs with validated schemas, evidence-based rationales (event IDs and timestamps), playbook selection, and guarded execution.
 
 ## Submission Package
-VM Export (OVA) or Reproducible Build Scripts: The submission should include either a VM export in OVA format or reproducible build scripts with checksums.
-Git Repository: A Git repository containing all the code, configurations, and exported n8n workflows should be included.
-Final Technical Report: A detailed technical report should be submitted, covering the build process, design decisions, and evaluation.
 
 [Download VMs here](https://auburn.box.com/s/o8qxyx7kyilt9bospoltq3zlz01tvfct)
 
