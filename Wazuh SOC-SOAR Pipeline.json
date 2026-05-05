@@ -1,0 +1,667 @@
+{
+  "name": "Wazuh SOC-SOAR Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        672,
+        160
+      ],
+      "id": "08fbabc1-8000-40ad-8dad-3ba2e47e7b37",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "6JQHuEAVOdhoIMHx",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a SOC analyst.\n\nReturn ONLY ONE valid JSON object.\nDo NOT return arrays.\nDo NOT wrap output in [].\nDo NOT include any text outside JSON.\n\nUse this EXACT schema:\n\n{\n  \"incident_id\": \"\",\n  \"host\": \"\",\n  \"timestamp\": \"\",\n\n  \"event_type\": \"sudo | cron | fim | unknown\",\n  \"attack_class\": \"privilege_escalation | persistence | file_integrity_violation | unknown\",\n\n  \"severity\": \"low | medium | high | critical\",\n  \"confidence\": 0-100,\n\n  \"summary\": \"\",\n\n  \"evidence\": [\n    {\n      \"type\": \"\",\n      \"value\": \"\"\n    }\n  ],\n\n  \"recommended_playbook\": \"\",\n  \"reasoning\": \"\"\n}\n\nRules:\n- event_type must reflect raw activity (sudo, cron, fim)\n- attack_class must map:\n  sudo → privilege_escalation\n  cron → persistence\n  fim → file_integrity_violation\n- If uncertain, use \"unknown\"\n- evidence must always include at least one object\n- summary must be 1 sentence\n- confidence must be 0–100\n\nIMPORTANT:\n- incident_id MUST be: rule_id + timestamp combined\n  format: \"rule_id-timestamp\"\n- host MUST come from the agent name\n- timestamp MUST come from the alert input\n\nAlert Context:\nMessage: {{$json.body.event.message}}\nHost: {{$json.body.agent.name}}\nTimestamp: {{$json.body.timestamp}}\nRule ID: {{$json.body.rule_id}}\n\nCRITICAL RULE:\nreasoning MUST always explain classification using evidence from the alert.\nIt cannot be empty.",
+        "options": {
+          "systemMessage": "You are a SOC analyst AI.\n\nReturn ONLY valid JSON. No explanations.\n\nYou analyze security alerts and output structured triage results.\n\nRules:\n- Use only evidence from input JSON\n- Do not hallucinate\n- If unsure, lower confidence"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "1c36c8f8-277d-4566-84fd-7d0cf062885b",
+      "name": "AI SOC Analyst"
+    },
+    {
+      "parameters": {
+        "jsCode": "const type = $json.event_type;\n\nlet attack_class = \"unknown\";\n\nswitch (type) {\n  case \"sudo\":\n    attack_class = \"privilege_escalation\";\n    break;\n\n  case \"cron\":\n    attack_class = \"persistence\";\n    break;\n\n  case \"fim\":\n    attack_class = \"file_integrity_violation\";\n    break;\n}\n\nreturn [{\n  json: {\n    ...$json,\n    attack_class\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "e15f2acb-a67b-4ef9-8a95-0cc8a6e01498",
+      "name": "Attack Class Identification"
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsed = JSON.parse($json.output);\n\nreturn [\n  {\n    json: parsed\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "9257d1c9-6413-44ae-b25b-4c02e833aa01",
+      "name": "JSON Formatting"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.attack_class}}",
+                    "rightValue": "privilege_escalation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "fb2d9ac8-48b4-4466-8fe0-cb82e7a105a9"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Privilege Escalation"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e2434fce-1242-4e3a-9d6a-964f51f09c85",
+                    "leftValue": "={{$json.attack_class}}",
+                    "rightValue": "persistence",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Persistence"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fc34bf48-f66b-4ef9-9e85-7df27a0ef825",
+                    "leftValue": "={{$json.attack_class}}",
+                    "rightValue": "file_integrity_violation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FIM Violation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1312,
+        -16
+      ],
+      "id": "c8d45592-75c9-4511-be63-1c9c2e6ede64",
+      "name": "Playbook Switch"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wazuh-alert",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "6667d3f3-68c4-4440-97b9-cadced6887f3",
+      "name": "Ingestion",
+      "webhookId": "a466652c-2931-4043-b10f-33f3dcff05e4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "832d1021-4f95-4bb7-93ec-cd68294d2821",
+              "name": "alert_id",
+              "value": "={{$json.alert_id || ($json.body.rule_id + '-' + $json.body.timestamp)}}",
+              "type": "string"
+            },
+            {
+              "id": "ec082a59-66ad-4d77-9ffb-065f9bd20f2c",
+              "name": "rule.id",
+              "value": "={{$json.body.rule.id}}",
+              "type": "string"
+            },
+            {
+              "id": "c04fbaf6-1f91-4b88-b0a2-cb0cad015a7f",
+              "name": "host",
+              "value": "={{$json.body.agent.name}}",
+              "type": "string"
+            },
+            {
+              "id": "471bc192-8b74-4164-a54a-e284b4dccb7b",
+              "name": "timestamp",
+              "value": "{{$json.body.timestamp}}",
+              "type": "string"
+            },
+            {
+              "id": "10813178-6817-4e2b-acf1-271481f46622",
+              "name": "event_type",
+              "value": "={{$json.body.event.type}}",
+              "type": "string"
+            },
+            {
+              "id": "de605756-8fe7-44f3-909d-4d20285e71a0",
+              "name": "event_message",
+              "value": "={{$json.body.event.message}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        0
+      ],
+      "id": "7a6a301e-c678-4ef2-a3f9-da297bb8c56b",
+      "name": "Enrichment"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "980dd11f-f3be-4867-92be-7196dcb2ea07",
+              "name": "playbook",
+              "value": "privilege_escalation",
+              "type": "string"
+            },
+            {
+              "id": "87aa1d45-66d4-4ea6-93cb-cc129970f6f2",
+              "name": "case_title",
+              "value": "Privilege Escalation Attempt Detected (sudo)",
+              "type": "string"
+            },
+            {
+              "id": "97f1e36b-e19b-4790-b37f-e522314d0cce",
+              "name": "priority",
+              "value": "={{ \n  $json.severity === \"critical\" ? \"P1\" :\n  $json.severity === \"high\" ? \"P2\" :\n  $json.severity === \"medium\" ? \"P3\" :\n  \"P4\"\n}}",
+              "type": "string"
+            },
+            {
+              "id": "eadc83a7-c198-4aeb-83a2-edeed929c93f",
+              "name": "response_actions",
+              "value": "[   \"Review sudo command execution logs on affected host\",   \"Identify user account and validate legitimacy of activity\",   \"Check for privilege escalation paths or misconfigurations\",   \"Inspect authentication logs for suspicious login behavior\" ]",
+              "type": "array"
+            },
+            {
+              "id": "514cfb2f-4023-4585-9f71-a0b1e4b3405c",
+              "name": "reasoning",
+              "value": "={{$json.reasoning}}",
+              "type": "string"
+            },
+            {
+              "id": "5df045e5-54a7-42c9-bf0a-13ccba97056d",
+              "name": "email_subject",
+              "value": "={{ `[${($json.severity || 'UNKNOWN').toUpperCase()}] Privilege Escalation Attempt Detected via sudo on ${$json.host}` }}",
+              "type": "string"
+            },
+            {
+              "id": "0c9f5ce0-035d-49e3-9270-ccace7e6e672",
+              "name": "evidence_artifact",
+              "value": "={   \"artifact_type\": \"privilege_escalation_case\",   \"event_type\": \"sudo\",   \"attack_class\": \"privilege_escalation\",    \"host\": \"{{$json.host}}\",   \"timestamp\": \"{{$json.timestamp}}\",   \"incident_id\": \"{{$json.incident_id}}\",    \"severity\": \"{{$json.severity}}\",   \"confidence\": {{$json.confidence}},    \"summary\": \"{{$json.summary}}\" }",
+              "type": "object"
+            },
+            {
+              "id": "3f1bab46-8f2d-4181-9f70-165898e98f69",
+              "name": "status",
+              "value": "triaged",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1712,
+        -192
+      ],
+      "id": "9a63a55c-6e6e-48ec-85dd-b966a5d2592d",
+      "name": "Privilege Escalation Playbook"
+    },
+    {
+      "parameters": {
+        "sendTo": "pjt0012@auburn.edu",
+        "subject": "=🚨 [SOAR ALERT] Privilege Escalation - {{$json.email_subject}}",
+        "message": "=<h2>🚨 SECURITY ALERT (SOAR SYSTEM)</h2>\n\n<hr>\n\n<h3>Incident Overview</h3>\n<p><b>Incident ID:</b> {{$json.evidence_artifact.incident_id}}</p>\n<p><b>Host:</b> {{$json.evidence_artifact.host}}</p>\n<p><b>Timestamp:</b> {{$json.evidence_artifact.timestamp}}</p>\n\n<hr>\n\n<h3>Classification</h3>\n<p><b>Attack Class:</b> {{$json.evidence_artifact.attack_class}}</p>\n<p><b>Event Type:</b> {{$json.evidence_artifact.event_type}}</p>\n<p><b>Severity:</b> {{$json.evidence_artifact.severity}}</p>\n<p><b>Confidence:</b> {{$json.evidence_artifact.confidence}}%</p>\n\n<p><b>Playbook:</b> {{$json.playbook}}</p>\n<p><b>Priority:</b> {{$json.priority}}</p>\n\n<hr>\n\n<h3>Analysis</h3>\n\n<p><b>Summary</b><br>\n{{$json.evidence_artifact.summary}}</p>\n\n<p><b>Reasoning</b><br>\n{{$json.reasoning}}</p>\n\n<hr>\n\n<h3>Response</h3>\n<p><b>Recommended Actions:</b></p>\n\n<ul>\n  {{ $json.response_actions.map(action => `<li>${action}</li>`).join('') }}\n</ul>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2672,
+        -192
+      ],
+      "id": "c3f43a46-a784-4222-b0b5-94942a1cb44c",
+      "name": "Security Alert Email",
+      "webhookId": "0aa039db-8aeb-48ee-89ef-9370e5f02f92",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gqcs1pdAFCg0pIvG",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "980dd11f-f3be-4867-92be-7196dcb2ea07",
+              "name": "playbook",
+              "value": "persistence",
+              "type": "string"
+            },
+            {
+              "id": "87aa1d45-66d4-4ea6-93cb-cc129970f6f2",
+              "name": "case_title",
+              "value": "Scheduled Task Persistence (Cron Manipulation)",
+              "type": "string"
+            },
+            {
+              "id": "97f1e36b-e19b-4790-b37f-e522314d0cce",
+              "name": "priority",
+              "value": "={{ \n  $json.severity === \"critical\" ? \"P1\" :\n  $json.severity === \"high\" ? \"P2\" :\n  $json.severity === \"medium\" ? \"P3\" :\n  \"P4\"\n}}",
+              "type": "string"
+            },
+            {
+              "id": "eadc83a7-c198-4aeb-83a2-edeed929c93f",
+              "name": "response_actions",
+              "value": "[   \"Inspect crontab entries for unauthorized tasks\",   \"Identify persistence mechanism or scheduled script\",   \"Check user and process responsible for cron creation\",   \"Remove or disable malicious scheduled job\",   \"Review system logs for initial persistence activity\" ]",
+              "type": "array"
+            },
+            {
+              "id": "514cfb2f-4023-4585-9f71-a0b1e4b3405c",
+              "name": "reasoning",
+              "value": "={{$json.reasoning}}",
+              "type": "string"
+            },
+            {
+              "id": "5df045e5-54a7-42c9-bf0a-13ccba97056d",
+              "name": "email_subject",
+              "value": "={{ `[${($json.severity || 'UNKNOWN').toUpperCase()}] Unauthorized Scheduled Task (Cron Job) Indicates Persistence Attempt on ${$json.host}` }}",
+              "type": "string"
+            },
+            {
+              "id": "0c9f5ce0-035d-49e3-9270-ccace7e6e672",
+              "name": "evidence_artifact",
+              "value": "={   \"artifact_type\": \"persistence_case\",   \"event_type\": \"{{$json.event_type}}\",   \"attack_class\": \"{{$json.attack_class}}\",    \"host\": \"{{$json.host}}\",   \"timestamp\": \"{{$json.timestamp}}\",   \"incident_id\": \"{{$json.incident_id}}\",    \"severity\": \"{{$json.severity}}\",   \"confidence\": {{$json.confidence}},    \"summary\": \"{{$json.summary}}\" }",
+              "type": "object"
+            },
+            {
+              "id": "3f1bab46-8f2d-4181-9f70-165898e98f69",
+              "name": "status",
+              "value": "triaged",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1712,
+        0
+      ],
+      "id": "40111ec9-00da-4799-8d5a-30a2dcee7651",
+      "name": "Persistence Playbook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://10.0.2.15:9200/soar-incidents-v2/_doc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2672,
+        80
+      ],
+      "id": "55efce96-f33f-4c12-bf6d-992aee5dbd07",
+      "name": "Incident Logger",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "0mqj3cg4YluSYtO3",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "980dd11f-f3be-4867-92be-7196dcb2ea07",
+              "name": "playbook",
+              "value": "file_integrity_violation",
+              "type": "string"
+            },
+            {
+              "id": "87aa1d45-66d4-4ea6-93cb-cc129970f6f2",
+              "name": "case_title",
+              "value": "Unauthorized File Modification (File Integrity Violation)",
+              "type": "string"
+            },
+            {
+              "id": "97f1e36b-e19b-4790-b37f-e522314d0cce",
+              "name": "priority",
+              "value": "={{ \n  $json.severity === \"critical\" ? \"P1\" :\n  $json.severity === \"high\" ? \"P2\" :\n  $json.severity === \"medium\" ? \"P3\" :\n  \"P4\"\n}}",
+              "type": "string"
+            },
+            {
+              "id": "eadc83a7-c198-4aeb-83a2-edeed929c93f",
+              "name": "response_actions",
+              "value": "[  \"Identify which file was created or modified\",   \"Compare file hash against known baseline\",   \"Investigate process that triggered file change\",   \"Check for unauthorized privilege escalation related to file change\" ]",
+              "type": "array"
+            },
+            {
+              "id": "514cfb2f-4023-4585-9f71-a0b1e4b3405c",
+              "name": "reasoning",
+              "value": "={{$json.reasoning}}",
+              "type": "string"
+            },
+            {
+              "id": "5df045e5-54a7-42c9-bf0a-13ccba97056d",
+              "name": "email_subject",
+              "value": "={{ `[${($json.severity || 'UNKNOWN').toUpperCase()}] File Integrity Violation Detected on ${$json.host}` }}",
+              "type": "string"
+            },
+            {
+              "id": "0c9f5ce0-035d-49e3-9270-ccace7e6e672",
+              "name": "evidence_artifact",
+              "value": "={   \"artifact_type\": \"file_integrity_violation_case\",   \"event_type\": \"{{$json.event_type}}\",   \"attack_class\": \"{{$json.attack_class}}\",    \"host\": \"{{$json.host}}\",   \"timestamp\": \"{{$json.timestamp}}\",   \"incident_id\": \"{{$json.incident_id}}\",    \"severity\": \"{{$json.severity}}\",   \"confidence\": {{$json.confidence}},    \"summary\": \"{{$json.summary}}\" }",
+              "type": "object"
+            },
+            {
+              "id": "3f1bab46-8f2d-4181-9f70-165898e98f69",
+              "name": "status",
+              "value": "triaged",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1712,
+        176
+      ],
+      "id": "17f528b7-57cd-41fb-b5b8-ae6c28db24ec",
+      "name": "FIM Violation Playbook"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      \"@timestamp\": $json[\"@timestamp\"] || $json.timestamp || new Date().toISOString(),\n\n      incident_id: $json.incident_id,\n      host: $json.agent?.name || $json.host,\n\n      event_type: $json.event?.type,\n      attack_class: $json.evidence_artifact?.attack_class,\n      severity: $json.evidence_artifact?.severity,\n      confidence: $json.evidence_artifact?.confidence,\n\n      playbook: $json.playbook,\n      case_title: $json.case_title,\n      priority: $json.priority,\n\n      response_actions: $json.response_actions || [],\n\n      reasoning: $json.reasoning,\n      email_subject: $json.email_subject,\n\n      evidence_artifact: {\n        incident_id: $json.evidence_artifact?.incident_id,\n        host: $json.evidence_artifact?.host || $json.agent?.name,\n        event_type: $json.evidence_artifact?.event_type,\n        attack_class: $json.evidence_artifact?.attack_class,\n        severity: $json.evidence_artifact?.severity,\n        confidence: $json.evidence_artifact?.confidence,\n        summary: $json.evidence_artifact?.summary\n      },\n\n      status: $json.status\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        80
+      ],
+      "id": "a16e83cc-f0b7-47cc-89df-697d4b327ccd",
+      "name": "Normalize SOAR Incident"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI SOC Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI SOC Analyst": {
+      "main": [
+        [
+          {
+            "node": "JSON Formatting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attack Class Identification": {
+      "main": [
+        [
+          {
+            "node": "AI SOC Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Formatting": {
+      "main": [
+        [
+          {
+            "node": "Playbook Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Playbook Switch": {
+      "main": [
+        [
+          {
+            "node": "Privilege Escalation Playbook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Persistence Playbook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FIM Violation Playbook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ingestion": {
+      "main": [
+        [
+          {
+            "node": "Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Attack Class Identification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Privilege Escalation Playbook": {
+      "main": [
+        [
+          {
+            "node": "Security Alert Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Normalize SOAR Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persistence Playbook": {
+      "main": [
+        [
+          {
+            "node": "Security Alert Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Normalize SOAR Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FIM Violation Playbook": {
+      "main": [
+        [
+          {
+            "node": "Security Alert Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Normalize SOAR Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incident Logger": {
+      "main": [
+        []
+      ]
+    },
+    "Normalize SOAR Incident": {
+      "main": [
+        [
+          {
+            "node": "Incident Logger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e883765f-aa7d-48b6-9edc-3f461ea902f9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6b35f54c611aa0a5def4238ce594e2fee8a60ee1da81b7cdd4f1307bcd343743"
+  },
+  "id": "5N7Hihk0YYADBr4W",
+  "tags": []
+}
