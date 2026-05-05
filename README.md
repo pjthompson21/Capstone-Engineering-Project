@@ -1,5 +1,5 @@
 # Agentic AI SOC-in-a-Box
-Built a fully functional virtual Security Operations Center (SOC) lab that demonstrates an end-to-end detection and response pipeline. The system integrates attack simulation, telemetry ingestion, detection engineering, AI-assisted triage, and automated incident response using SOAR workflows.
+Built a virtual Security Operations Center (SOC) lab that demonstrates an end-to-end detection and response pipeline. The system integrates attack simulation, telemetry ingestion, detection engineering, AI-assisted triage, and automated incident response using SOAR workflows.
 
 The goal of the project is to replicate a modern SOC environment with agentic automation layered on top of traditional SIEM operations.
 
