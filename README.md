@@ -8,9 +8,11 @@ The goal of the project is to replicate a modern SOC environment with agentic au
 
 Designed and validated a reliable log ingestion pipeline where security events from a target environment are consistently collected, normalized, and made searchable for analysis and detection.
 
+
 🔹 Detection Engineering
 
 Developed and tested 8–10 working detection rules covering authentication, privilege escalation, persistence, and file integrity monitoring. Each detection was validated against controlled attack scenarios to ensure reliability and repeatability.
+
 
 🔹 Reproducible Attack Simulation
 
@@ -22,6 +24,7 @@ Implemented three fully reproducible attack scenarios using scripted or runbook-
 
 Each scenario generates predictable telemetry for detection and response validation.
 
+
 🔹 SOAR Automation (n8n Workflows)
 
 Built automated SOAR workflows using n8n to:
@@ -31,6 +34,7 @@ Built automated SOAR workflows using n8n to:
 - Trigger AI-assisted triage workflows
 - Generate structured incident artifacts
 - Execute response actions based on playbook selection
+
 
 🔹 Agentic AI Triage System
 
