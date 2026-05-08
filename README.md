@@ -58,6 +58,4 @@ This enables consistent, evidence-driven incident handling aligned with SOC work
 
 ## Submission Package
 
-[VMs, Project Report, and Video Demo here](https://auburn.box.com/s/o8qxyx7kyilt9bospoltq3zlz01tvfct)
-
-[Project Report](https://docs.google.com/document/d/1GbJdnVYQo5JIdlywgF17szlDpU_vcLPbauzVtjmf-LQ/edit?tab=t.0)
+[VMs, Project Report, and Video Demo](https://auburn.box.com/s/o8qxyx7kyilt9bospoltq3zlz01tvfct)
